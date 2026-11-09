@@ -223,7 +223,7 @@ def _build_message(mailbox, to_address, subject, body, bcc, in_reply_to, referen
     elif mailbox.is_resend:
         message["References"] = message["Message-ID"]
     signed = _sign(body, mailbox.signature)
-    message.set_content(_attribute(_opt_out_for(mailbox, signed, unsubscribe_url)))
+    message.set_content(_opt_out_for(mailbox, signed, unsubscribe_url))
     return message
 
 
@@ -283,21 +283,6 @@ def _opt_out_for(mailbox, body: str, unsubscribe_url: str) -> str:
     if not mailbox.is_resend:
         return _opt_out(body)
     return f"{body.rstrip()}\n\n{UNSUBSCRIBE_LINE.format(url=unsubscribe_url)}\n"
-
-
-ATTRIBUTION = "Sent with OpenOutreach"
-
-
-def _attribute(body: str) -> str:
-    """Append the product attribution line, separated by a blank line.
-
-    Always on, last in the message (after the signature): every recipient of an
-    outbound email is a plausible future operator. It names the product without
-    linking it — a bare name reads as a footer, a URL reads as an ad, and anyone
-    curious enough to act on it can search. The separator matches every other
-    block's, so the tail of the message reads as evenly spaced.
-    """
-    return f"{body.rstrip()}\n\n{ATTRIBUTION}\n"
 
 
 def _mint_message_id(from_address: str) -> str:

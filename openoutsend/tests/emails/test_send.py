@@ -14,7 +14,6 @@ from openoutsend.core.agents.outreach import OutreachDecision
 from openoutsend.core.sequences import cold
 from openoutsend.emails.models import Mailbox, Thread
 from openoutsend.emails.sender import (
-    ATTRIBUTION,
     OPT_OUT_LINE,
     operator_bcc,
     send_email,
@@ -212,7 +211,6 @@ class TestSentBodyLogging:
         """Signature, opt-out and attribution are the same on every send — noise here."""
         text = self._send(caplog)
         assert "— Ercole" not in text
-        assert ATTRIBUTION.strip() not in text
         assert OPT_OUT_LINE.strip() not in text
 
 
@@ -238,15 +236,15 @@ class TestSendEmailSignature:
     def test_signature_appended_after_blank_line(self):
         body = self._sent_body("Eracle\nopenoutreach.app")
         assert body == (
-            f"Body\n\nEracle\nopenoutreach.app\n\n{OPT_OUT_LINE}\n\n{ATTRIBUTION}\n"
+            f"Body\n\nEracle\nopenoutreach.app\n\n{OPT_OUT_LINE}\n"
         )
 
-    def test_body_carries_only_opt_out_and_attribution_when_signature_blank(self):
-        assert self._sent_body("") == f"Body\n\n{OPT_OUT_LINE}\n\n{ATTRIBUTION}\n"
+    def test_body_carries_only_opt_out_when_signature_blank(self):
+        assert self._sent_body("") == f"Body\n\n{OPT_OUT_LINE}\n"
 
-    def test_body_carries_only_opt_out_and_attribution_when_signature_unset(self):
+    def test_body_carries_only_opt_out_when_signature_unset(self):
         """A never-asked box (NULL) sends unsigned rather than crashing on None."""
-        assert self._sent_body(None) == f"Body\n\n{OPT_OUT_LINE}\n\n{ATTRIBUTION}\n"
+        assert self._sent_body(None) == f"Body\n\n{OPT_OUT_LINE}\n"
 
 
 @pytest.mark.django_db
@@ -259,18 +257,14 @@ class TestSendEmailAttribution:
             send_email(box, "lead@corp.com", "Hi", "Body", **kwargs)
         return deliver.call_args.args[1].get_content()
 
-    def test_attribution_is_the_last_line(self):
+    def test_no_attribution_footer_the_opt_out_is_the_last_line(self):
         body = self._sent_body(self._box("Eracle"))
-        assert body.rstrip().splitlines()[-1] == ATTRIBUTION
+        assert body.rstrip().splitlines()[-1] == OPT_OUT_LINE
+        assert "Sent with OpenOutreach" not in body
 
-    def test_attribution_follows_the_signature(self):
-        body = self._sent_body(self._box("Eracle"))
-        assert body.index("Eracle") < body.index(ATTRIBUTION)
-
-    def test_follow_up_also_carries_attribution(self):
-        """Threaded replies go through the same assembly, so they carry it too."""
+    def test_follow_up_also_has_no_footer(self):
         body = self._sent_body(self._box("Eracle"), in_reply_to="<prior@corp.com>")
-        assert body.endswith(f"{ATTRIBUTION}\n")
+        assert body.endswith(f"{OPT_OUT_LINE}\n")
 
     def test_the_metadata_line_names_the_recipient_and_subject(self, caplog):
         """Two records per send: what went where, then what was written (see above)."""
@@ -279,7 +273,6 @@ class TestSendEmailAttribution:
         metadata = [r for r in caplog.records
                     if r.name == "openoutsend.emails.sender"][0].getMessage()
         assert "lead@corp.com" in metadata and "Hi" in metadata
-        assert ATTRIBUTION not in metadata
 
 
 # ── The prompt line rides on the send ─────────────────────────────

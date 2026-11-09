@@ -29,7 +29,6 @@ from openoutsend.core.sequences import cold
 from openoutsend.emails.mail_pass import run_mail_pass
 from openoutsend.emails.models import Mailbox
 from openoutsend.emails.sender import (
-    ATTRIBUTION,
     OPT_OUT_LINE,
     send_email,
     suppressed,
@@ -82,9 +81,10 @@ class TestOptOutIsAdvertised:
         render an unsubscribe button of their own."""
         assert OPT_OUT_LINE in _sent_message().get_content()
 
-    def test_opt_out_sits_between_the_signature_and_the_attribution(self):
+    def test_opt_out_follows_the_signature_and_ends_the_body(self):
         body = _sent_message().get_content()
-        assert body.index("Eracle") < body.index(OPT_OUT_LINE) < body.index(ATTRIBUTION)
+        assert body.index("Eracle") < body.index(OPT_OUT_LINE)
+        assert body.rstrip().endswith(OPT_OUT_LINE)
 
 
 class TestUnsubscribeAddress:
